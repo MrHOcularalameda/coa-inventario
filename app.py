@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from utils.auth import login_form, logout_button
 from utils.supabase_client import get_supabase_client
@@ -13,6 +14,24 @@ st.set_page_config(
 
 if not login_form():
     st.stop()
+
+if os.path.exists("assets/logo.png"):
+    st.sidebar.image("assets/logo.png", width=140)
+
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"] {
+        background-color: #0F2438;
+        color: #FFFFFF;
+    }
+    [data-testid="stSidebar"] * {
+        color: #FFFFFF !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 logout_button()
 
