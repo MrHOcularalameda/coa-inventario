@@ -87,68 +87,6 @@ def _seccion_armazones(sb):
             st.rerun()
 
 
-def _seccion_lentes_contacto(sb):
-    st.subheader("Lentes de contacto")
-
-    marcas = _cargar_catalogo(sb, "marcas")
-    proveedores = _cargar_catalogo(sb, "proveedores")
-
-    if not marcas or not proveedores:
-        st.warning("Primero agrega al menos una marca y un proveedor en la pestaña Catálogos.")
-        return
-
-    with st.expander("➕ Dar de alta lentes de contacto nuevos"):
-        with st.form("form_nuevo_lente", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            marca_sel = col1.selectbox("Marca", [m["nombre"] for m in marcas])
-            proveedor_sel = col2.selectbox("Proveedor", [p["nombre"] for p in proveedores])
-
-            col3, col4 = st.columns(2)
-            diseno = col3.text_input("Diseño (ej. Oasys, Biofinity)")
-            existencias = col4.number_input("Existencias", min_value=0, step=1, value=1)
-
-            enviado = st.form_submit_button("Guardar")
-
-            if enviado:
-                if not diseno.strip():
-                    st.error("El diseño es obligatorio.")
-                else:
-                    marca_id = next(m["id"] for m in marcas if m["nombre"] == marca_sel)
-                    proveedor_id = next(p["id"] for p in proveedores if p["nombre"] == proveedor_sel)
-                    try:
-                        sb.table("lentes_contacto").insert({
-                            "marca_id": marca_id,
-                            "proveedor_id": proveedor_id,
-                            "diseno": diseno.strip(),
-                            "existencias": int(existencias),
-                        }).execute()
-                        st.success("Lentes de contacto agregados.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"No se pudo guardar (¿ya existe esa combinación?): {e}")
-
-    st.divider()
-    st.write("**Inventario actual**")
-
-    lentes = sb.table("lentes_contacto").select("id,diseno,existencias,marcas(nombre)").order("diseno").execute().data
-
-    if not lentes:
-        st.info("No hay lentes de contacto registrados.")
-        return
-
-    for l in lentes:
-        col1, col2, col3 = st.columns([4, 2, 2])
-        marca_nombre = l["marcas"]["nombre"] if l.get("marcas") else "—"
-        col1.write(f'{marca_nombre} · {l["diseno"]}')
-        nueva_existencia = col2.number_input(
-            "Existencias", min_value=0, value=int(l["existencias"]), key=f'exist_lc_{l["id"]}', label_visibility="collapsed"
-        )
-        if col3.button("Actualizar", key=f'upd_lc_{l["id"]}'):
-            sb.table("lentes_contacto").update({"existencias": int(nueva_existencia)}).eq("id", l["id"]).execute()
-            st.success("Actualizado.")
-            st.rerun()
-
-
 def _seccion_accesorios(sb):
     st.subheader("Accesorios")
 
@@ -227,11 +165,9 @@ def _seccion_accesorios(sb):
 def mostrar_inventario(sb):
     st.title("📦 Inventario")
 
-    tab1, tab2, tab3 = st.tabs(["Armazones", "Lentes de contacto", "Accesorios"])
+    tab1, tab2 = st.tabs(["Armazones", "Accesorios"])
 
     with tab1:
         _seccion_armazones(sb)
     with tab2:
-        _seccion_lentes_contacto(sb)
-    with tab3:
         _seccion_accesorios(sb)
