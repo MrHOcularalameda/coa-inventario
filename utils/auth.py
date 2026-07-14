@@ -17,9 +17,11 @@ def login_form():
     col_izq, col_centro, col_der = st.columns([1, 2, 1])
     with col_centro:
         if os.path.exists("assets/logo.png"):
-            st.image("assets/logo.png", use_container_width=True)
+            _, col_logo, _ = st.columns([1, 1, 1])
+            with col_logo:
+                st.image("assets/logo.png", width=160)
         st.markdown(
-            "<h3 style='text-align: center;'>Sistema de Gestión de Inventarios</h3>",
+            "<h2 style='text-align: center;'>Sistema de Gestión de Inventarios</h2>",
             unsafe_allow_html=True,
         )
         st.subheader("Iniciar sesión")
