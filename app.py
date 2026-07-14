@@ -1,5 +1,7 @@
 import streamlit as st
 from utils.auth import login_form, logout_button
+from utils.supabase_client import get_supabase_client
+from utils.venta import mostrar_formulario_venta
 
 st.set_page_config(
     page_title="COA — Inventario",
@@ -12,6 +14,7 @@ if not login_form():
 
 logout_button()
 
+sb = get_supabase_client()
 rol = st.session_state["rol"]
 
 if rol == "admin":
@@ -24,5 +27,4 @@ if rol == "admin":
         st.info("Aquí va el módulo de Auditor (reportes) — siguiente paso")
 
 elif rol == "ventas":
-    st.title("Registro de venta")
-    st.info("Aquí va el formulario de venta para Andrea — siguiente paso")
+    mostrar_formulario_venta(sb)
