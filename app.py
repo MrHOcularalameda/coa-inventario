@@ -17,7 +17,7 @@ if not login_form():
     st.stop()
 
 if os.path.exists("assets/logo.png"):
-    st.sidebar.image("assets/logo.png", width=140)
+    st.sidebar.image("assets/logo.png", width=175)
 
 st.markdown(
     """
@@ -30,8 +30,8 @@ st.markdown(
         color: #FFFFFF !important;
     }
     [data-testid="stSidebar"] [data-testid="stImage"] {
-        width: 100px !important;
-        height: 100px !important;
+        width: 125px !important;
+        height: 125px !important;
         overflow: hidden !important;
         border-radius: 50% !important;
         display: flex !important;
