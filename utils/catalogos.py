@@ -65,6 +65,15 @@ def _mostrar_catalogo(sb, tabla: str, titulo: str, campo_extra: dict = None):
                     st.error(f"No se pudo agregar (¿ya existe ese nombre?): {e}")
 
 
+def _mostrar_micas(sb):
+    st.subheader("Micas / lentes oftálmicas")
+    st.caption(
+        "No manejan existencias — se piden según la graduación de cada paciente. "
+        "Aquí solo defines qué opciones le aparecen a Andrea al vender un armazón."
+    )
+    _mostrar_catalogo(sb, "micas", "Micas")
+
+
 def _mostrar_disenos_lentes_contacto(sb):
     st.subheader("Diseños de lentes de contacto")
     st.caption(
@@ -72,18 +81,18 @@ def _mostrar_disenos_lentes_contacto(sb):
         "qué combinaciones de marca + diseño le aparecen a Andrea como opción de venta."
     )
 
-    marcas = sb.table("marcas").select("id,nombre").eq("activo", True).order("nombre").execute().data
+    marcas = sb.table("marcas_lc").select("id,nombre").eq("activo", True).order("nombre").execute().data
     proveedores = sb.table("proveedores").select("id,nombre").eq("activo", True).order("nombre").execute().data
     if not marcas or not proveedores:
-        st.warning("Primero agrega al menos una marca y un proveedor en sus pestañas correspondientes.")
+        st.warning("Primero agrega al menos una marca (pestaña 'Marcas LC') y un proveedor.")
         return
 
-    lentes = sb.table("lentes_contacto").select("id,diseno,activo,marcas(nombre)").order("diseno").execute().data
+    lentes = sb.table("lentes_contacto").select("id,diseno,activo,marcas_lc(nombre)").order("diseno").execute().data
 
     if lentes:
         for l in lentes:
             col1, col2 = st.columns([4, 1])
-            marca_nombre = l["marcas"]["nombre"] if l.get("marcas") else "—"
+            marca_nombre = l["marcas_lc"]["nombre"] if l.get("marcas_lc") else "—"
             col1.write(f'{marca_nombre} · {l["diseno"]}')
             etiqueta_boton = "Desactivar" if l["activo"] else "Activar"
             if col2.button(etiqueta_boton, key=f'lc_{l["id"]}'):
@@ -107,7 +116,7 @@ def _mostrar_disenos_lentes_contacto(sb):
                 proveedor_id = next(p["id"] for p in proveedores if p["nombre"] == proveedor_sel)
                 try:
                     sb.table("lentes_contacto").insert({
-                        "marca_id": marca_id,
+                        "marca_lc_id": marca_id,
                         "proveedor_id": proveedor_id,
                         "diseno": diseno.strip(),
                     }).execute()
@@ -125,17 +134,21 @@ def mostrar_catalogos(sb):
         "solo deja de aparecer como opción nueva."
     )
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["Proveedores", "Marcas", "Categorías de accesorios", "Responsables", "Diseños de lentes de contacto"]
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
+        ["Proveedores", "Marcas (armazones)", "Marcas (LC)", "Categorías de accesorios",
+         "Responsables", "Diseños de lentes de contacto", "Micas"]
     )
 
     with tab1:
         _mostrar_catalogo(sb, "proveedores", "Proveedores")
 
     with tab2:
-        _mostrar_catalogo(sb, "marcas", "Marcas")
+        _mostrar_catalogo(sb, "marcas", "Marcas de armazones")
 
     with tab3:
+        _mostrar_catalogo(sb, "marcas_lc", "Marcas de lentes de contacto")
+
+    with tab4:
         _mostrar_catalogo(
             sb,
             "categorias_accesorios",
@@ -143,8 +156,11 @@ def mostrar_catalogos(sb):
             campo_extra={"campo": "alerta_stock_minimo", "etiqueta": "Alerta si baja de"},
         )
 
-    with tab4:
+    with tab5:
         _mostrar_catalogo(sb, "responsables", "Responsables")
 
-    with tab5:
+    with tab6:
         _mostrar_disenos_lentes_contacto(sb)
+
+    with tab7:
+        _mostrar_micas(sb)
