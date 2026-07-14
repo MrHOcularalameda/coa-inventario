@@ -47,9 +47,17 @@ def _input_precio_unitario(key_prefix):
 
 def _seccion_anteojos(sb):
     st.subheader("Agregar armazón")
-    marcas = _cargar_marcas(sb)
-    if not marcas:
+    marcas_todas = _cargar_marcas(sb)
+    if not marcas_todas:
         st.warning("No hay marcas registradas todavía.")
+        return
+
+    armazones_stock = sb.table("armazones").select("marca_id").gt("existencias", 0).execute().data
+    ids_con_stock = {a["marca_id"] for a in armazones_stock}
+    marcas = [m for m in marcas_todas if m["id"] in ids_con_stock]
+
+    if not marcas:
+        st.info("No hay armazones con existencia disponible en ninguna marca.")
         return
 
     nombres_marca = [m["nombre"] for m in marcas]
