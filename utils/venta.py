@@ -88,10 +88,12 @@ def _seccion_anteojos(sb):
     micas = _cargar_micas(sb)
     agregar_mica = False
     mica_sel = None
+    precio_mica = None
     if micas:
         agregar_mica = st.checkbox("Agregar mica a esta venta", key="anteojos_agregar_mica")
         if agregar_mica:
             mica_sel = st.selectbox("Tipo de mica", [m["nombre"] for m in micas], key="anteojos_mica")
+            precio_mica = _input_precio_unitario("anteojos_mica")
     else:
         st.caption("No hay micas dadas de alta todavía.")
 
@@ -110,7 +112,7 @@ def _seccion_anteojos(sb):
                 "mica_id": mica_id,
                 "descripcion": f"Mica: {mica_sel}",
                 "cantidad": 1,
-                "precio_unitario": None,
+                "precio_unitario": precio_mica,
             })
         st.success("Armazón agregado")
         st.rerun()
