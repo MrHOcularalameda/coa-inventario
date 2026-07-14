@@ -74,6 +74,7 @@ def _seccion_anteojos(sb):
 
 def _seccion_lentes_contacto(sb):
     st.subheader("Agregar lentes de contacto")
+    st.caption("Se venden sobre pedido — no manejan existencias en inventario.")
     marcas = _cargar_marcas(sb)
     if not marcas:
         st.warning("No hay marcas registradas todavía.")
@@ -85,25 +86,23 @@ def _seccion_lentes_contacto(sb):
 
     lentes = (
         sb.table("lentes_contacto")
-        .select("id,diseno,existencias")
+        .select("id,diseno")
         .eq("marca_id", marca_id)
-        .gt("existencias", 0)
+        .eq("activo", True)
         .order("diseno")
         .execute()
         .data
     )
 
     if not lentes:
-        st.info(f"No hay existencias disponibles de {marca_sel}.")
+        st.info(f"No hay diseños de {marca_sel} dados de alta. Pídele al administrador que lo agregue en Catálogos.")
         return
 
-    etiquetas = [f'{l["diseno"]} (disp: {l["existencias"]})' for l in lentes]
-    idx = st.selectbox("Diseño disponible", range(len(etiquetas)), format_func=lambda i: etiquetas[i], key="lc_diseno")
+    etiquetas = [l["diseno"] for l in lentes]
+    idx = st.selectbox("Diseño", range(len(etiquetas)), format_func=lambda i: etiquetas[i], key="lc_diseno")
     lente = lentes[idx]
 
-    cantidad = st.number_input(
-        "Cantidad", min_value=1, max_value=int(lente["existencias"]), value=1, key="lc_cantidad"
-    )
+    cantidad = st.number_input("Cantidad", min_value=1, value=1, key="lc_cantidad")
 
     if st.button("➕ Agregar lentes de contacto a la venta"):
         st.session_state.carrito.append({
