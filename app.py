@@ -28,13 +28,20 @@ st.markdown(
     [data-testid="stSidebar"] * {
         color: #FFFFFF !important;
     }
-    [data-testid="stSidebar"] img {
-        border-radius: 50%;
-        object-fit: cover;
-        width: 100px;
-        height: 100px;
-        display: block;
+    [data-testid="stSidebar"] [data-testid="stImage"] {
+        width: 100px !important;
+        height: 100px !important;
+        overflow: hidden !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        justify-content: center;
+        align-items: center;
         margin: 0 auto;
+    }
+    [data-testid="stSidebar"] [data-testid="stImage"] img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
     }
     [data-testid="stSidebar"] button {
         background-color: #1B3A5C !important;
