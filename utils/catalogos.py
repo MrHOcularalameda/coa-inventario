@@ -65,6 +65,58 @@ def _mostrar_catalogo(sb, tabla: str, titulo: str, campo_extra: dict = None):
                     st.error(f"No se pudo agregar (¿ya existe ese nombre?): {e}")
 
 
+def _mostrar_disenos_lentes_contacto(sb):
+    st.subheader("Diseños de lentes de contacto")
+    st.caption(
+        "Estos no manejan existencias — se venden sobre pedido. Aquí solo defines "
+        "qué combinaciones de marca + diseño le aparecen a Andrea como opción de venta."
+    )
+
+    marcas = sb.table("marcas").select("id,nombre").eq("activo", True).order("nombre").execute().data
+    proveedores = sb.table("proveedores").select("id,nombre").eq("activo", True).order("nombre").execute().data
+    if not marcas or not proveedores:
+        st.warning("Primero agrega al menos una marca y un proveedor en sus pestañas correspondientes.")
+        return
+
+    lentes = sb.table("lentes_contacto").select("id,diseno,activo,marcas(nombre)").order("diseno").execute().data
+
+    if lentes:
+        for l in lentes:
+            col1, col2 = st.columns([4, 1])
+            marca_nombre = l["marcas"]["nombre"] if l.get("marcas") else "—"
+            col1.write(f'{marca_nombre} · {l["diseno"]}')
+            etiqueta_boton = "Desactivar" if l["activo"] else "Activar"
+            if col2.button(etiqueta_boton, key=f'lc_{l["id"]}'):
+                sb.table("lentes_contacto").update({"activo": not l["activo"]}).eq("id", l["id"]).execute()
+                st.rerun()
+    else:
+        st.info("Todavía no hay diseños registrados.")
+
+    with st.form("form_nuevo_diseno_lc", clear_on_submit=True):
+        st.write("Agregar nuevo diseño")
+        marca_sel = st.selectbox("Marca", [m["nombre"] for m in marcas])
+        proveedor_sel = st.selectbox("Proveedor", [p["nombre"] for p in proveedores])
+        diseno = st.text_input("Diseño (ej. Oasys, Biofinity)")
+        enviado = st.form_submit_button("Agregar")
+
+        if enviado:
+            if not diseno.strip():
+                st.error("El diseño no puede estar vacío.")
+            else:
+                marca_id = next(m["id"] for m in marcas if m["nombre"] == marca_sel)
+                proveedor_id = next(p["id"] for p in proveedores if p["nombre"] == proveedor_sel)
+                try:
+                    sb.table("lentes_contacto").insert({
+                        "marca_id": marca_id,
+                        "proveedor_id": proveedor_id,
+                        "diseno": diseno.strip(),
+                    }).execute()
+                    st.success("Diseño agregado.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"No se pudo agregar (¿ya existe esa combinación?): {e}")
+
+
 def mostrar_catalogos(sb):
     st.title("📋 Catálogos")
     st.caption(
@@ -73,7 +125,9 @@ def mostrar_catalogos(sb):
         "solo deja de aparecer como opción nueva."
     )
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Proveedores", "Marcas", "Categorías de accesorios", "Responsables"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["Proveedores", "Marcas", "Categorías de accesorios", "Responsables", "Diseños de lentes de contacto"]
+    )
 
     with tab1:
         _mostrar_catalogo(sb, "proveedores", "Proveedores")
@@ -91,3 +145,6 @@ def mostrar_catalogos(sb):
 
     with tab4:
         _mostrar_catalogo(sb, "responsables", "Responsables")
+
+    with tab5:
+        _mostrar_disenos_lentes_contacto(sb)
