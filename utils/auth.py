@@ -19,7 +19,7 @@ def login_form():
         if os.path.exists("assets/logo.png"):
             _, col_logo, _ = st.columns([1, 1, 1])
             with col_logo:
-                st.image("assets/logo.png", width=192)
+                st.image("assets/logo.png", width=240)
         st.markdown(
             "<h2 style='text-align: center;'>Sistema de Gestión de Inventarios</h2>",
             unsafe_allow_html=True,
