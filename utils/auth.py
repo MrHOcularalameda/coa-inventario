@@ -5,6 +5,7 @@ de usuarios: si en el futuro se necesita un tercer usuario, se agrega
 directamente en secrets.toml.
 """
 
+import os
 import streamlit as st
 
 
@@ -13,13 +14,20 @@ def login_form():
     if st.session_state.get("autenticado"):
         return True
 
-    st.title("👓 Centro Ocular Alameda — Inventario")
-    st.subheader("Iniciar sesión")
+    col_izq, col_centro, col_der = st.columns([1, 2, 1])
+    with col_centro:
+        if os.path.exists("assets/logo.png"):
+            st.image("assets/logo.png", use_container_width=True)
+        st.markdown(
+            "<h3 style='text-align: center;'>Sistema de Gestión de Inventarios</h3>",
+            unsafe_allow_html=True,
+        )
+        st.subheader("Iniciar sesión")
 
-    with st.form("login_form"):
-        usuario = st.text_input("Usuario")
-        contrasena = st.text_input("Contraseña", type="password")
-        enviado = st.form_submit_button("Entrar")
+        with st.form("login_form"):
+            usuario = st.text_input("Usuario")
+            contrasena = st.text_input("Contraseña", type="password")
+            enviado = st.form_submit_button("Entrar")
 
     if enviado:
         usuarios = st.secrets["usuarios"]
