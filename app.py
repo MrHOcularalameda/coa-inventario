@@ -28,12 +28,35 @@ st.markdown(
     [data-testid="stSidebar"] * {
         color: #FFFFFF !important;
     }
+    [data-testid="stSidebar"] img {
+        border-radius: 50%;
+        object-fit: cover;
+        width: 100px;
+        height: 100px;
+        display: block;
+        margin: 0 auto;
+    }
+    [data-testid="stSidebar"] button {
+        background-color: #1B3A5C !important;
+        color: #FFFFFF !important;
+        border: 1px solid #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] button:hover {
+        background-color: #2C5480 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #FFFFFF !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 logout_button()
+
+st.markdown(
+    "<h2 style='text-align: center;'>Sistema de Gestión de Inventarios</h2>",
+    unsafe_allow_html=True,
+)
 
 sb = get_supabase_client()
 rol = st.session_state["rol"]
