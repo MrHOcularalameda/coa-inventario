@@ -3,11 +3,14 @@ Formulario de registro de venta (rol: ventas / Andrea).
 
 Flujo:
 1. Andrea va agregando artículos a un "carrito" temporal (armazones,
-   lentes de contacto o accesorios), eligiendo siempre de listas
-   desplegables que solo muestran lo que hay en existencia.
+   lentes de contacto, accesorios o micas), eligiendo siempre de
+   listas desplegables. Armazones y accesorios se limitan a lo que
+   hay en existencia; lentes de contacto y micas se piden sobre
+   pedido y no dependen de inventario.
 2. Al final llena folio, responsable y total, y guarda todo el folio
    de un jalón. Cada artículo del carrito se inserta en venta_detalle,
-   y el trigger de la base de datos descuenta el inventario solo.
+   y el trigger de la base de datos descuenta el inventario donde
+   aplica (armazones y accesorios únicamente).
 """
 
 import streamlit as st
@@ -17,12 +20,29 @@ def _cargar_marcas(sb):
     return sb.table("marcas").select("id,nombre").eq("activo", True).order("nombre").execute().data
 
 
+def _cargar_marcas_lc(sb):
+    return sb.table("marcas_lc").select("id,nombre").eq("activo", True).order("nombre").execute().data
+
+
+def _cargar_micas(sb):
+    return sb.table("micas").select("id,nombre").eq("activo", True).order("nombre").execute().data
+
+
 def _cargar_responsables(sb):
     return sb.table("responsables").select("id,nombre").eq("activo", True).order("nombre").execute().data
 
 
 def _cargar_categorias_accesorios(sb):
     return sb.table("categorias_accesorios").select("id,nombre").eq("activo", True).order("nombre").execute().data
+
+
+def _input_precio_unitario(key_prefix):
+    precio = st.number_input(
+        "Precio unitario (opcional)", min_value=0.0, step=0.5, format="%.2f", key=f"{key_prefix}_precio"
+    )
+    if precio > 0:
+        st.caption(f"${precio:,.2f}")
+    return precio if precio > 0 else None
 
 
 def _seccion_anteojos(sb):
@@ -61,13 +81,37 @@ def _seccion_anteojos(sb):
         "Cantidad", min_value=1, max_value=int(armazon["existencias"]), value=1, key="anteojos_cantidad"
     )
 
+    precio_unitario = _input_precio_unitario("anteojos")
+
+    st.divider()
+    st.caption("¿Lleva mica? (opcional, no depende de inventario)")
+    micas = _cargar_micas(sb)
+    agregar_mica = False
+    mica_sel = None
+    if micas:
+        agregar_mica = st.checkbox("Agregar mica a esta venta", key="anteojos_agregar_mica")
+        if agregar_mica:
+            mica_sel = st.selectbox("Tipo de mica", [m["nombre"] for m in micas], key="anteojos_mica")
+    else:
+        st.caption("No hay micas dadas de alta todavía.")
+
     if st.button("➕ Agregar armazón a la venta"):
         st.session_state.carrito.append({
             "tipo_articulo": "armazon",
             "armazon_id": armazon["id"],
             "descripcion": f'Armazón {marca_sel} {armazon["codigo"]}',
             "cantidad": int(cantidad),
+            "precio_unitario": precio_unitario,
         })
+        if agregar_mica and mica_sel:
+            mica_id = next(m["id"] for m in micas if m["nombre"] == mica_sel)
+            st.session_state.carrito.append({
+                "tipo_articulo": "mica",
+                "mica_id": mica_id,
+                "descripcion": f"Mica: {mica_sel}",
+                "cantidad": 1,
+                "precio_unitario": None,
+            })
         st.success("Armazón agregado")
         st.rerun()
 
@@ -75,9 +119,9 @@ def _seccion_anteojos(sb):
 def _seccion_lentes_contacto(sb):
     st.subheader("Agregar lentes de contacto")
     st.caption("Se venden sobre pedido — no manejan existencias en inventario.")
-    marcas = _cargar_marcas(sb)
+    marcas = _cargar_marcas_lc(sb)
     if not marcas:
-        st.warning("No hay marcas registradas todavía.")
+        st.warning("No hay marcas de lentes de contacto registradas todavía.")
         return
 
     nombres_marca = [m["nombre"] for m in marcas]
@@ -87,7 +131,7 @@ def _seccion_lentes_contacto(sb):
     lentes = (
         sb.table("lentes_contacto")
         .select("id,diseno")
-        .eq("marca_id", marca_id)
+        .eq("marca_lc_id", marca_id)
         .eq("activo", True)
         .order("diseno")
         .execute()
@@ -103,6 +147,7 @@ def _seccion_lentes_contacto(sb):
     lente = lentes[idx]
 
     cantidad = st.number_input("Cantidad", min_value=1, value=1, key="lc_cantidad")
+    precio_unitario = _input_precio_unitario("lc")
 
     if st.button("➕ Agregar lentes de contacto a la venta"):
         st.session_state.carrito.append({
@@ -110,6 +155,7 @@ def _seccion_lentes_contacto(sb):
             "lente_contacto_id": lente["id"],
             "descripcion": f'Lentes de contacto {marca_sel} {lente["diseno"]}',
             "cantidad": int(cantidad),
+            "precio_unitario": precio_unitario,
         })
         st.success("Lentes de contacto agregados")
         st.rerun()
@@ -147,6 +193,7 @@ def _seccion_accesorios(sb):
     cantidad = st.number_input(
         "Cantidad", min_value=1, max_value=int(accesorio["existencias"]), value=1, key="acc_cantidad"
     )
+    precio_unitario = _input_precio_unitario("acc")
 
     if st.button("➕ Agregar accesorio a la venta"):
         st.session_state.carrito.append({
@@ -154,6 +201,7 @@ def _seccion_accesorios(sb):
             "accesorio_id": accesorio["id"],
             "descripcion": f'{cat_sel}: {accesorio["descripcion"]}',
             "cantidad": int(cantidad),
+            "precio_unitario": precio_unitario,
         })
         st.success("Accesorio agregado")
         st.rerun()
@@ -167,7 +215,8 @@ def _mostrar_carrito():
 
     for i, item in enumerate(st.session_state.carrito):
         col1, col2 = st.columns([5, 1])
-        col1.write(f'{item["descripcion"]} — cantidad: {item["cantidad"]}')
+        precio_txt = f' · ${item["precio_unitario"]:,.2f}' if item.get("precio_unitario") else ""
+        col1.write(f'{item["descripcion"]} — cantidad: {item["cantidad"]}{precio_txt}')
         if col2.button("Quitar", key=f"quitar_{i}"):
             st.session_state.carrito.pop(i)
             st.rerun()
@@ -208,6 +257,8 @@ def mostrar_formulario_venta(sb):
         responsable_id = next(r["id"] for r in responsables if r["nombre"] == resp_sel)
 
     total = st.number_input("Total de la venta ($) *", min_value=0.0, step=0.5, format="%.2f")
+    if total > 0:
+        st.caption(f"Total: ${total:,.2f}")
 
     if st.button("💾 Guardar venta", type="primary"):
         errores = []
@@ -240,6 +291,7 @@ def mostrar_formulario_venta(sb):
                     "venta_id": venta_id,
                     "tipo_articulo": item["tipo_articulo"],
                     "cantidad": item["cantidad"],
+                    "precio_unitario": item.get("precio_unitario"),
                 }
                 if item["tipo_articulo"] == "armazon":
                     detalle["armazon_id"] = item["armazon_id"]
@@ -247,6 +299,8 @@ def mostrar_formulario_venta(sb):
                     detalle["lente_contacto_id"] = item["lente_contacto_id"]
                 elif item["tipo_articulo"] == "accesorio":
                     detalle["accesorio_id"] = item["accesorio_id"]
+                elif item["tipo_articulo"] == "mica":
+                    detalle["mica_id"] = item["mica_id"]
 
                 sb.table("venta_detalle").insert(detalle).execute()
 
